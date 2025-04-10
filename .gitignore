@@ -31,3 +31,6 @@
 *.exe
 *.out
 *.app
+
+GEMM/src/*.o
+GEMM/include/cuda_gemm_utils.cuh:Zone.Identifier
