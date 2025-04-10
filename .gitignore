@@ -34,3 +34,5 @@
 
 GEMM/src/*.o
 GEMM/include/cuda_gemm_utils.cuh:Zone.Identifier
+GEMM/include/*.Identifier
+GEMM/src/*.Identifier
