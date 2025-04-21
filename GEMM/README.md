@@ -86,7 +86,7 @@ If you have any questions or suggestions, feel free to open an issue or reach ou
 
 ## Acknowledgements
 
-We would like to thank everyone who contributed to this repository, providing feedback and bug reports, making this project possible.
+We would like to thank everyone who contributed to this repository, providing feedback and bug reports, making this project possible. I run this benchmark result on my NVIDIA GeForce RTX 2070.
 
 <!-- benchmark_results -->
 | Kernel                              |  ms |
