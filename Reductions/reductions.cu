@@ -1,3 +1,7 @@
+/**
+ * please compile with -arch, when I run this code on A100, compile without arch I got
+ * reduction w/atomic sum incorrect! reduce w/atomic sum is 0.000000, but with arch I got the right answer.
+ */
 #include <cstdio>
 #include <cuda_runtime.h>
 #include <iostream>
@@ -5,6 +9,7 @@
 #define BLOCK_SIZE 256
 const size_t N = 8ULL * 1024ULL * 1024ULL; // data size
 
+// sequential addressing
 __global__ void reduce_a(float *gdata, float *out)
 {
     __shared__ float sdata[BLOCK_SIZE];
@@ -14,7 +19,7 @@ __global__ void reduce_a(float *gdata, float *out)
 
     while (idx < N)
     {
-        // grid stride loop
+        // grid stride loop to load data
         sdata[tid] += gdata[idx];
         idx += gridDim.x * blockDim.x;
     }
@@ -72,8 +77,44 @@ __global__ void reduce_ws(float *gdata, float *out)
     }
 }
 
+/**
+ * compare reduce_a it is faster.
+ */
+__global__ void reduce4(float *gdata, float *out)
+{
+    extern __shared__ float sdata[];
+    int tid = threadIdx.x;
+    int idx = threadIdx.x + (blockDim.x * 2) * blockIdx.x;
+
+    while (idx < N)
+    {
+        // grid stride loop to load data, First Add During Load
+        sdata[tid] = gdata[idx] + gdata[idx + blockDim.x];
+        idx += gridDim.x * blockDim.x * 2;
+    }
+
+    __syncthreads();
+
+    // do reduction in shared mem
+    for (size_t s = blockDim.x >> 2; s > 0; s >>= 1)
+    {
+        if (tid < s)
+            sdata[tid] += sdata[tid + s];
+
+        __syncthreads();
+    }
+
+    // write result for this block to global mem
+    if (tid == 0)
+        out[blockIdx.x] = sdata[0];
+}
+
 int main()
 {
+
+    int threadsPerBlock = 512;                                     // Number of threads per block
+    int numBlocks = (N + threadsPerBlock - 1) / (threadsPerBlock); // Number of blocks
+
     float *h_A, *h_sum, *d_A, *d_sum;
     h_A = new float[N]; // allocate space for data in host memory
     h_sum = new float;
@@ -85,12 +126,12 @@ int main()
 
     // copy matrix A to device:
     cudaMemcpy(d_A, h_A, N * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemset(d_sum, 0, sizeof(float));
-    // Define the number of threads and blocks
-    int blockSize = 640;
-    int numBlocks = (N + blockSize - 1) / blockSize;
 
-    reduce_a<<<numBlocks, BLOCK_SIZE>>>(d_A, d_sum);
+    // Define the number of threads and blocks
+    const int blockSize = 640;
+    cudaMemset(d_sum, 0, sizeof(float));
+
+    reduce_a<<<blockSize, BLOCK_SIZE>>>(d_A, d_sum);
     cudaMemcpy(h_sum, d_sum, sizeof(float), cudaMemcpyDeviceToHost);
 
     if (*h_sum != (float)N)
@@ -102,7 +143,7 @@ int main()
     printf("reduction w/atomic sum correct!\n");
 
     cudaMemset(d_sum, 0, sizeof(float));
-    reduce_ws<<<numBlocks, blockSize>>>(d_A, d_sum);
+    reduce_ws<<<numBlocks, threadsPerBlock>>>(d_A, d_sum);
     cudaMemcpy(h_sum, d_sum, sizeof(float), cudaMemcpyDeviceToHost);
     // Wait for GPU to finish before accessing on host
 
@@ -113,6 +154,21 @@ int main()
         return -1;
     }
     printf("reduction warp shuffle sum correct!!\n");
+
+    // Define the number of threads and blocks
+    cudaMemset(d_sum, 0, sizeof(float));
+
+    reduce4<<<numBlocks, threadsPerBlock>>>(d_A, d_sum);
+
+    cudaMemcpy(h_sum, d_sum, sizeof(float), cudaMemcpyDeviceToHost);
+
+    if (*h_sum != (float)N)
+    {
+        printf("reduction4  sum incorrect!\n");
+        printf("reduce4 sum is %f\n", *h_sum);
+        return -1;
+    }
+    printf("reduction4 sum correct!\n");
 
     // Clean up
     delete[] h_A;
