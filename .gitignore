@@ -36,3 +36,10 @@ GEMM/src/*.o
 GEMM/include/cuda_gemm_utils.cuh:Zone.Identifier
 GEMM/include/*.Identifier
 GEMM/src/*.Identifier
+stream/add
+stream/overlap
+GEMM/report1.nsys-rep
+.gitignore
+Reductions/reduction
+Parallel Character Frequency Counter/warandpeace.txt
+Parallel Character Frequency Counter/warandpeace.txt:Zone.Identifier

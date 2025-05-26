@@ -9,7 +9,7 @@
 #define BLOCK_SIZE 256
 const size_t N = 8ULL * 1024ULL * 1024ULL; // data size
 
-// sequential addressing
+// sequential addressing, with atomic
 __global__ void reduce_a(float *gdata, float *out)
 {
     __shared__ float sdata[BLOCK_SIZE];
@@ -111,10 +111,6 @@ __global__ void reduce4(float *gdata, float *out)
 
 int main()
 {
-
-    int threadsPerBlock = 512;                                     // Number of threads per block
-    int numBlocks = (N + threadsPerBlock - 1) / (threadsPerBlock); // Number of blocks
-
     float *h_A, *h_sum, *d_A, *d_sum;
     h_A = new float[N]; // allocate space for data in host memory
     h_sum = new float;
@@ -128,6 +124,9 @@ int main()
     cudaMemcpy(d_A, h_A, N * sizeof(float), cudaMemcpyHostToDevice);
 
     // Define the number of threads and blocks
+    int threadsPerBlock = 256;                                     // Number of threads per block
+    int numBlocks = (N + threadsPerBlock - 1) / (threadsPerBlock); // Number of blocks
+
     const int blockSize = 640;
     cudaMemset(d_sum, 0, sizeof(float));
 
