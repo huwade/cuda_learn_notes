@@ -43,3 +43,6 @@ GEMM/report1.nsys-rep
 Reductions/reduction
 Parallel Character Frequency Counter/warandpeace.txt
 Parallel Character Frequency Counter/warandpeace.txt:Zone.Identifier
+*.sqlite
+report1.nsys-rep
+Reductions/*.nsys-rep

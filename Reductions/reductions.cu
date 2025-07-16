@@ -44,9 +44,10 @@ __global__ void reduce_ws(float *gdata, float *out)
     float val = 0.0f;
 
     unsigned mask = 0xFFFFFFFFU;
-    int lane = threadIdx.x % warpSize;
-    int warpID = threadIdx.x / warpSize;
+    int lane = threadIdx.x % warpSize;   // which thread am I in the warp. each warp has 32 thread.
+    int warpID = threadIdx.x / warpSize; // multiple warp, warp 0, 1, ...
 
+    // instead in share memory, this time we run val, is local variable
     while (idx < N)
     {
         val += gdata[idx];
@@ -86,6 +87,7 @@ __global__ void reduce4(float *gdata, float *out)
     int tid = threadIdx.x;
     int idx = threadIdx.x + (blockDim.x * 2) * blockIdx.x;
 
+    // Load data to shared memory
     while (idx < N)
     {
         // grid stride loop to load data, First Add During Load
@@ -95,7 +97,7 @@ __global__ void reduce4(float *gdata, float *out)
 
     __syncthreads();
 
-    // do reduction in shared mem
+    // do reduction in shared mem, reduction tree
     for (size_t s = blockDim.x >> 2; s > 0; s >>= 1)
     {
         if (tid < s)
